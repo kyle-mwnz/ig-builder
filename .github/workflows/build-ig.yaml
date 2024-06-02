@@ -1,0 +1,64 @@
+name: Build and Publish Implementation Guide
+run-name: |
+  Building IG ${{ github.event.inputs.ig_url }} branch: ${{ github.event.inputs.branch }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ig_url:
+        description: 'Enter a Git URL url for the FHIR Implementation Guide to Build'
+        required: true
+      branch:
+        description: 'Enter the Git branch to build'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+      - name: Download HL7 IG Publisher Scripts
+        run: |
+          git clone https://github.com/HL7/ig-publisher-scripts.git scripts
+      - name: Download Dependencies
+        run: |
+          npm install -g fsh-sushi
+          gem install jekyll bundler
+      - name: Configure Variables
+        run: |
+          # Set the IG Name Variable for re-use
+          IG_NAME="$(basename ${{ github.event.inputs.ig_url }} .git)"
+          echo "IG_NAME=$IG_NAME" >> "$GITHUB_ENV"
+      - name: Build Implementation Guide
+        run: |
+          git clone -b ${{ github.event.inputs.branch }} ${{ github.event.inputs.ig_url }}
+          ls -lf $IG_NAME
+          cp scripts/_genonce.sh $IG_NAME/_genonce.sh
+          cp scripts/_updatePublisher.sh $IG_NAME/_updatePublisher.sh
+          cd $IG_NAME
+          bash ./_updatePublisher.sh -f -y
+          bash ./_genonce.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Build Log
+          path: build.log
+
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ap-southeast-2
+
+      # - name: Publish Implementation Guide
+      #   run: |
+      #     if [ "${{ github.event.inputs.branch }}" != "main" ]; then
+      #       IG_SUBPATH=""
+      #     else
+      #       IG_SUBPATH="${{ github.event.inputs.branch }}"
+      #     fi
+      #     aws s3 sync $IG_NAME/output s3://${{ secrets.S3_BUCKET_NAME }}/$IG_NAME/$IG_SUBPATH
