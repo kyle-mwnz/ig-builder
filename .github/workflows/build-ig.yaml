@@ -11,6 +11,9 @@ on:
       branch:
         description: 'Enter the Git branch to build'
         required: true
+      short_name:
+        description: 'Enter the IG short name'
+        required: true
 
 jobs:
   build:
