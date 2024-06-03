@@ -27,6 +27,11 @@ jobs:
       - name: Download HL7 IG Publisher Scripts
         run: |
           git clone https://github.com/HL7/ig-publisher-scripts.git scripts
+      - name: Configure Variables
+        run: |
+          # Set the IG Name Variable for re-use
+          IG_NAME="$(basename ${{ github.event.inputs.ig_url }} .git)"
+          echo "IG_NAME=$IG_NAME" >> "$GITHUB_ENV"
       - name: Download Dependencies
         run: |
           npm install -g fsh-sushi
@@ -35,9 +40,9 @@ jobs:
       - name: Build Implementation Guide
         run: |
           git clone -b ${{ github.event.inputs.branch }} ${{ github.event.inputs.ig_url }}
-          ls -lf ${{ github.event.inputs.short_name }}
-          cp scripts/_genonce.sh ${{ github.event.inputs.short_name }}/_genonce.sh
-          cp scripts/_updatePublisher.sh ${{ github.event.inputs.short_name }}/_updatePublisher.sh
+          ls -lf $IG_NAME
+          cp scripts/_genonce.sh $IG_NAME/_genonce.sh
+          cp scripts/_updatePublisher.sh $IG_NAME/_updatePublisher.sh
           cd ${{ github.event.inputs.short_name }}
           bash ./_updatePublisher.sh -f -y
           bash ./_genonce.sh
@@ -61,4 +66,4 @@ jobs:
           else
             IG_SUBPATH="branches/${{ github.event.inputs.branch }}"
           fi
-          aws s3 sync ${{ github.event.inputs.short_name }}/output s3://${{ secrets.S3_BUCKET_NAME }}/${{ github.event.inputs.short_name }}/$IG_SUBPATH
+          aws s3 sync $IG_NAME/output s3://${{ secrets.S3_BUCKET_NAME }}/${{ github.event.inputs.short_name }}/$IG_SUBPATH
