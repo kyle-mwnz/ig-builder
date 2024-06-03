@@ -32,37 +32,33 @@ jobs:
           npm install -g fsh-sushi
           gem install jekyll bundler
           sudo apt-get install graphviz
-      - name: Configure Variables
-        run: |
-          # Set the IG Name Variable for re-use
-          IG_NAME="$(basename ${{ github.event.inputs.ig_url }} .git)"
-          echo "IG_NAME=$IG_NAME" >> "$GITHUB_ENV"
       - name: Build Implementation Guide
         run: |
           git clone -b ${{ github.event.inputs.branch }} ${{ github.event.inputs.ig_url }}
-          ls -lf $IG_NAME
-          cp scripts/_genonce.sh $IG_NAME/_genonce.sh
-          cp scripts/_updatePublisher.sh $IG_NAME/_updatePublisher.sh
-          cd $IG_NAME
+          ls -lf ${{ github.event.inputs.short_name }}
+          cp scripts/_genonce.sh ${{ github.event.inputs.short_name }}/_genonce.sh
+          cp scripts/_updatePublisher.sh ${{ github.event.inputs.short_name }}/_updatePublisher.sh
+          cd ${{ github.event.inputs.short_name }}
           bash ./_updatePublisher.sh -f -y
           bash ./_genonce.sh
+          cd ..
       - uses: actions/upload-artifact@v4
         with:
           name: Build Log
           path: /tmp/fhir-ig-publisher-tmp.log
 
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: ap-southeast-2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
 
-      # - name: Publish Implementation Guide
-      #   run: |
-      #     if [ "${{ github.event.inputs.branch }}" != "main" ]; then
-      #       IG_SUBPATH=""
-      #     else
-      #       IG_SUBPATH="${{ github.event.inputs.branch }}"
-      #     fi
-      #     aws s3 sync $IG_NAME/output s3://${{ secrets.S3_BUCKET_NAME }}/$IG_NAME/$IG_SUBPATH
+      - name: Publish Implementation Guide
+        run: |
+          if [ "${{ github.event.inputs.branch }}" == "master" ]; then
+            IG_SUBPATH=""
+          else
+            IG_SUBPATH="branches/${{ github.event.inputs.branch }}"
+          fi
+          aws s3 sync ${{ github.event.inputs.short_name }}/output s3://${{ secrets.S3_BUCKET_NAME }}/${{ github.event.inputs.short_name }}/$IG_SUBPATH
