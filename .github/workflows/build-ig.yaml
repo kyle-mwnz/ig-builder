@@ -43,7 +43,7 @@ jobs:
           ls -lf $IG_NAME
           cp scripts/_genonce.sh $IG_NAME/_genonce.sh
           cp scripts/_updatePublisher.sh $IG_NAME/_updatePublisher.sh
-          cd ${{ github.event.inputs.short_name }}
+          cd $IG_NAME
           bash ./_updatePublisher.sh -f -y
           bash ./_genonce.sh
           cd ..
